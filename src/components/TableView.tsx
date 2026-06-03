@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api, getCurrentUser, type Table, type Order, type Food, type OrderItem, type Booking } from '../api';
-import { Plus, Users, Selection, Receipt, FileText, X } from '@phosphor-icons/react';
+import { api, getCurrentUser, type Table, type Order, type Food, type Booking } from '../api';
+import { Plus, Users, Receipt, FileText, X } from '@phosphor-icons/react';
 import { CustomSelect } from './CustomSelect';
 
 const getLocalDateString = (d: Date = new Date()) => {
@@ -200,22 +200,23 @@ export const TableView: React.FC<TableViewProps> = ({ onNavigateToOrders, onNavi
   const [bookError, setBookError] = useState('');
   const [bookSuccess, setBookSuccess] = useState('');
 
-    // Helper to determine if shared bookings exist and seats are left
+  // Helper to determine if shared bookings exist and seats are left
   const currentTableBookings = selectedTable ? bookings.filter(b => b.table_id === selectedTable.id && (b.status === 'pending' || b.status === 'checked_in')) : [];
   const hasSharedBooking = currentTableBookings.some(b => b.is_shared);
   const isSharedAndNotFull = selectedTable ? (hasSharedBooking && (selectedTable.seats_reserved || 0) < selectedTable.number_of_guests) : false;
 
+  const showBookingTab = selectedTable ? (selectedTable.status === 'vacant' || selectedTable.status === 'reserved' || (selectedTable.status === 'occupied' && isSharedAndNotFull)) : false;
+  const showOrderTab = selectedTable ? (selectedTable.status === 'occupied') : false;
+
   useEffect(() => {
     if (!selectedTable) return;
-    const showBookingTab = selectedTable.status === 'vacant' || selectedTable.status === 'reserved' || (selectedTable.status === 'occupied' && isSharedAndNotFull);
-    const showOrderTab = selectedTable.status === 'occupied';
 
     if (activeView === 'booking' && !showBookingTab && showOrderTab) {
       setActiveView('order');
     } else if (activeView === 'order' && !showOrderTab && showBookingTab) {
       setActiveView('booking');
     }
-  }, [selectedTable?.status, bookings]);
+  }, [selectedTable?.status, bookings, activeView, showBookingTab, showOrderTab]);
 
   const getSelectableTimeOptions = (selectedDateStr: string) => {
     const allSlots = Array.from({ length: 25 }).map((_, i) => {
@@ -635,6 +636,20 @@ export const TableView: React.FC<TableViewProps> = ({ onNavigateToOrders, onNavi
                           textAlign: 'center'
                         }}>
                           {bookError}
+                        </div>
+                      )}
+
+                      {bookSuccess && (
+                        <div className="form-success" style={{
+                          padding: '0.5rem 0.75rem',
+                          backgroundColor: 'oklch(0.95 0.05 140)',
+                          border: '1px solid oklch(0.85 0.10 140)',
+                          borderRadius: '6px',
+                          color: 'oklch(0.4 0.15 140)',
+                          fontSize: '0.8rem',
+                          textAlign: 'center'
+                        }}>
+                          {bookSuccess}
                         </div>
                       )}
 

@@ -217,7 +217,9 @@ export const api = {
     return {
       id: t.id || t.table?.id,
       table_number: t.table?.table_number || t.table_number,
+      capacity: t.table?.capacity || t.capacity || 2,
       number_of_guests: t.table?.number_of_guests || t.table?.capacity || t.number_of_guests || t.capacity || 2,
+      seats_reserved: t.table?.seats_reserved || t.seats_reserved || 0,
       status: t.table?.status || t.status || (t.table?.is_available || t.is_available ? 'vacant' : 'occupied')
     };
   },
