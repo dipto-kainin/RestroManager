@@ -13,6 +13,7 @@ import { Plus, PencilSimple, Trash, List } from '@phosphor-icons/react';
 import { CustomSelect } from '../../components/CustomSelect';
 import { FoodFormModal, parseMarkdown } from './FoodFormModal';
 import { CategoryFormModal } from './CategoryFormModal';
+import { stripHtml, getFirstParagraph } from '../../utils/text';
 
 interface MenuScreenProps {
   currentUser: User | null;
@@ -258,10 +259,9 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({ currentUser }) => {
               )}
               <div className="food-card-body">
                 <h4 className="food-card-title">{food.name}</h4>
-                <div 
-                  className="food-card-desc"
-                  dangerouslySetInnerHTML={{ __html: parseMarkdown(food.description || 'No description provided.') }}
-                />
+                <div className="food-card-desc">
+                  {stripHtml(parseMarkdown(getFirstParagraph(food.description || 'No description provided.')))}
+                </div>
                 <div className="food-card-footer">
                   <span className="food-card-price">₹{food.price.toFixed(2)}</span>
                   {isAdmin && (
