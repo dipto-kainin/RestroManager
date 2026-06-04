@@ -1529,3 +1529,33 @@ p {
   justify-content: center;
   color: var(--muted);
 }
+
+/* Table Detail Modal Grid Layout */
+.table-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 2.5rem;
+  margin-top: 1.5rem;
+  flex: 1;
+}
+
+.table-detail-sidebar {
+  border-right: 1px solid var(--surface-border);
+  padding-right: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .table-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .table-detail-sidebar {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid var(--surface-border);
+    padding-bottom: 1.5rem;
+  }
+}

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { api, type User } from '../api';
+import { login, signup, type User } from '../../services';
 import { Envelope, Key, User as UserIcon, Phone, ArrowRight, ShieldCheck, UserGear, Users } from '@phosphor-icons/react';
 
-interface AuthViewProps {
+interface AuthScreenProps {
   onAuthSuccess: (user: User) => void;
 }
 
-export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,12 +23,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
 
     try {
       if (isLogin) {
-        // If email is admin@..., force mock to sign up or login as admin
         const credentials = { email, password };
-        const result = await api.login(credentials);
+        const result = await login(credentials);
         onAuthSuccess(result.user);
       } else {
-        const result = await api.signup({
+        const result = await signup({
           first_name: firstName,
           last_name: lastName,
           email,
@@ -120,13 +119,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             )}
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Email Address</label>
+              <label className="form-label">{isLogin ? 'Email or Phone Number' : 'Email Address'}</label>
               <div style={{ position: 'relative' }}>
                 <Envelope size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                 <input
-                  type="email"
+                  type={isLogin ? 'text' : 'email'}
                   className="form-input"
-                  placeholder="jane.doe@bistro.com"
+                  placeholder={isLogin ? 'e.g. jane.doe@bistro.com or +91 98765 43210' : 'jane.doe@bistro.com'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -168,7 +167,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 </div>
               </div>
             )}
-
 
             {isLogin && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>

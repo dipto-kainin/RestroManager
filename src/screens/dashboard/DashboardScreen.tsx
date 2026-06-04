@@ -1,39 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { api, type Table, type Order, type Invoice, type Food } from '../api';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTablesQuery, useOrdersWithActiveItemsQuery, useInvoicesQuery, useFoodsQuery } from '../../services';
 import { ChartPieSlice, ClipboardText, CurrencyInr, ForkKnife, Plus, ArrowUpRight, Receipt, SealCheck } from '@phosphor-icons/react';
 
-interface DashboardViewProps {
-  onNavigate: (tab: string) => void;
-}
+export const DashboardScreen: React.FC = () => {
+  const navigate = useNavigate();
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
-  const [tables, setTables] = useState<Table[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [foods, setFoods] = useState<Food[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: tables = [], isLoading: loadingTables } = useTablesQuery();
+  const { data: orders = [], isLoading: loadingOrders } = useOrdersWithActiveItemsQuery();
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoicesQuery();
+  const { data: foods = [], isLoading: loadingFoods } = useFoodsQuery();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [tbls, ords, invs, fds] = await Promise.all([
-          api.getTables(),
-          api.getOrders(),
-          api.getInvoices(),
-          api.getFoods()
-        ]);
-        setTables(tbls);
-        setOrders(ords);
-        setInvoices(invs);
-        setFoods(fds);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const loading = loadingTables || loadingOrders || loadingInvoices || loadingFoods;
 
   if (loading) {
     return (
@@ -116,7 +94,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div className="card" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Live Order Queue</h3>
-              <button className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={() => onNavigate('orders')}>
+              <button className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={() => navigate('/orders')}>
                 Manage Board <ArrowUpRight size={14} />
               </button>
             </div>
@@ -153,7 +131,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>₹{total.toFixed(2)}</span>
-                        <button className="btn btn-secondary" style={{ padding: '0.375rem 0.75rem', fontSize: '0.8rem' }} onClick={() => onNavigate('orders')}>
+                        <button className="btn btn-secondary" style={{ padding: '0.375rem 0.75rem', fontSize: '0.8rem' }} onClick={() => navigate('/orders')}>
                           View
                         </button>
                       </div>
@@ -168,13 +146,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div className="card" style={{ padding: '2rem' }}>
             <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.25rem', fontWeight: 700 }}>Quick Actions</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-              <button className="btn btn-primary" onClick={() => onNavigate('tables')}>
+              <button className="btn btn-primary" onClick={() => navigate('/tables')}>
                 <Plus size={16} /> Open Table Order
               </button>
-              <button className="btn btn-secondary" onClick={() => onNavigate('menu')}>
+              <button className="btn btn-secondary" onClick={() => navigate('/menu')}>
                 <Plus size={16} /> Manage Menu
               </button>
-              <button className="btn btn-secondary" onClick={() => onNavigate('invoices')}>
+              <button className="btn btn-secondary" onClick={() => navigate('/invoices')}>
                 <Plus size={16} /> Review Invoices
               </button>
             </div>

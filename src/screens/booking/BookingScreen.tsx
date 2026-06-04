@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { api, type Table, type Booking, type Food, getCurrentUser } from '../api';
+import { 
+  useTablesQuery,
+  useBookingsQuery,
+  useFoodsQuery,
+  useCreateBookingMutation,
+  useCancelBookingMutation,
+  getCurrentUser, 
+  type Table, 
+  type Booking 
+} from '../../services';
 import { Users, Check, X, CalendarCheck, MapPin, Info, ArrowRight, CaretLeft, ClipboardText, ForkKnife, SignOut } from '@phosphor-icons/react';
-import { CustomSelect } from './CustomSelect';
+import { CustomSelect } from '../../components/CustomSelect';
+import { getLocalDateString, isTimeInPast } from '../../utils/date';
 
-const getLocalDateString = (d: Date = new Date()) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-interface BookingViewProps {
+interface BookingScreenProps {
   onSignOut: () => void;
 }
 
 type BookingStep = 'party' | 'datetime' | 'table' | 'confirm' | 'done';
 type CustomerTab = 'book' | 'my-bookings' | 'menu';
 
-export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
+export const BookingScreen: React.FC<BookingScreenProps> = ({ onSignOut }) => {
   const [activeTab, setActiveTab] = useState<CustomerTab>('book');
   const [step, setStep] = useState<BookingStep>('party');
   const [partySize, setPartySize] = useState<number>(2);
@@ -27,16 +30,24 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
   const [bookingTime, setBookingTime] = useState<string>('12:00');
   const [bookingDuration, setBookingDuration] = useState<number>(2);
 
-  const [tables, setTables] = useState<Table[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [foods, setFoods] = useState<Food[]>([]);
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [timeWindow, setTimeWindow] = useState<{ start?: string; end?: string }>({});
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [comfortSharing, setComfortSharing] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [lastBooking, setLastBooking] = useState<Booking | null>(null);
 
   const currentUser = getCurrentUser();
+
+  // Queries
+  const { data: tables = [] } = useTablesQuery(timeWindow.start, timeWindow.end);
+  const { data: bookings = [] } = useBookingsQuery();
+  const { data: foods = [] } = useFoodsQuery();
+
+  const selectedTable = selectedTableId ? tables.find(t => t.id === selectedTableId) || null : null;
+
+  // Mutations
+  const createBookingMutation = useCreateBookingMutation();
+  const cancelBookingMutation = useCancelBookingMutation();
 
   const getSelectableTimeOptions = (selectedDateStr: string) => {
     const allSlots = Array.from({ length: 25 }).map((_, i) => {
@@ -91,47 +102,7 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
     }
   }, [bookingDate]);
 
-  const loadTables = async () => {
-    try {
-      const allTables = await api.getTables();
-      setTables(allTables);
-    } catch (err) {
-      console.error('Error loading tables:', err);
-    }
-  };
-
-  const loadTablesForWindow = async (start: string, end: string) => {
-    try {
-      const allTables = await api.getTables(start, end);
-      setTables(allTables);
-    } catch (err) {
-      console.error('Error loading tables for time window:', err);
-    }
-  };
-
-  const loadBookings = async () => {
-    try {
-      const allBookings = await api.getBookings();
-      setBookings(allBookings);
-    } catch (err) {
-      console.error('Error loading bookings:', err);
-    }
-  };
-
-  const loadFoods = async () => {
-    try {
-      const allFoods = await api.getFoods();
-      setFoods(allFoods);
-    } catch (err) {
-      console.error('Error loading foods:', err);
-    }
-  };
-
-  useEffect(() => {
-    loadTables();
-    loadBookings();
-    loadFoods();
-  }, []);
+  const loading = createBookingMutation.isPending || cancelBookingMutation.isPending;
 
   // Filter tables available for the given party size
   const getAvailableTables = () => {
@@ -173,14 +144,13 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
   };
 
   const handleSelectTable = (table: Table) => {
-    setSelectedTable(table);
+    setSelectedTableId(table.id || null);
     setComfortSharing(false);
     setBookingError('');
   };
 
   const handleConfirmBooking = async () => {
     if (!selectedTable || !selectedTable.id) return;
-    setLoading(true);
     setBookingError('');
 
     const capacity = selectedTable.capacity || selectedTable.number_of_guests;
@@ -202,9 +172,8 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
     }
 
     const startDateTime = new Date(`${bookingDate}T${bookingTime}:00`);
-    if (startDateTime.getTime() < Date.now() - 60000) { // 1 min grace
+    if (isTimeInPast(bookingDate, bookingTime)) {
       setBookingError('Booking time must be in the future.');
-      setLoading(false);
       return;
     }
     const endDateTime = new Date(startDateTime.getTime() + bookingDuration * 60 * 60 * 1000);
@@ -212,7 +181,7 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
     const endTimeISO = endDateTime.toISOString();
 
     try {
-      const booking = await api.createBooking({
+      const booking = await createBookingMutation.mutateAsync({
         table_id: selectedTable.id,
         party_size: partySize,
         is_shared: isShared,
@@ -222,20 +191,14 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
       });
       setLastBooking(booking);
       setStep('done');
-      await loadTables();
-      await loadBookings();
     } catch (err: any) {
       setBookingError(err.message || 'Failed to create booking');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
-      await api.cancelBooking(bookingId);
-      await loadBookings();
-      await loadTables();
+      await cancelBookingMutation.mutateAsync(bookingId);
     } catch (err) {
       console.error('Error cancelling booking:', err);
     }
@@ -244,10 +207,11 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
   const handleNewBooking = () => {
     setStep('party');
     setPartySize(2);
-    setSelectedTable(null);
+    setSelectedTableId(null);
     setComfortSharing(false);
     setLastBooking(null);
     setBookingError('');
+    setTimeWindow({});
   };
 
   const availableTables = getAvailableTables();
@@ -276,14 +240,14 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
               </button>
               <button
                 className={`customer-nav-btn ${activeTab === 'my-bookings' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('my-bookings'); loadBookings(); }}
+                onClick={() => { setActiveTab('my-bookings'); }}
               >
                 <ClipboardText size={18} />
                 <span>My Bookings</span>
               </button>
               <button
                 className={`customer-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('menu'); loadFoods(); }}
+                onClick={() => { setActiveTab('menu'); }}
               >
                 <ForkKnife size={18} />
                 <span>Menu</span>
@@ -422,15 +386,17 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
                     className="btn btn-primary"
                     onClick={() => {
                       const startDateTime = new Date(`${bookingDate}T${bookingTime}:00`);
-    if (startDateTime.getTime() < Date.now() - 60000) { // 1 min grace
-      setBookingError('Booking time must be in the future.');
-      setLoading(false);
-      return;
-    }
+                      if (isTimeInPast(bookingDate, bookingTime)) {
+                        setBookingError('Booking time must be in the future.');
+                        return;
+                      }
                       const endDateTime = new Date(startDateTime.getTime() + bookingDuration * 60 * 60 * 1000);
-                      loadTablesForWindow(startDateTime.toISOString(), endDateTime.toISOString());
+                      setTimeWindow({
+                        start: startDateTime.toISOString(),
+                        end: endDateTime.toISOString()
+                      });
                       setStep('table');
-                      setSelectedTable(null);
+                      setSelectedTableId(null);
                     }}
                     style={{ padding: '0.75rem 2rem' }}
                   >
@@ -571,11 +537,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
                     <span className="summary-value">
                       {(() => {
                         const startDateTime = new Date(`${bookingDate}T${bookingTime}:00`);
-    if (startDateTime.getTime() < Date.now() - 60000) { // 1 min grace
-      setBookingError('Booking time must be in the future.');
-      setLoading(false);
-      return;
-    }
                         const endDateTime = new Date(startDateTime.getTime() + bookingDuration * 60 * 60 * 1000);
                         return `${startDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} (${bookingDuration} hours)`;
                       })()}
@@ -672,7 +633,7 @@ export const BookingView: React.FC<BookingViewProps> = ({ onSignOut }) => {
                   <button className="btn btn-primary" onClick={handleNewBooking}>
                     Book Another Table
                   </button>
-                  <button className="btn btn-secondary" onClick={() => { setActiveTab('my-bookings'); loadBookings(); }}>
+                  <button className="btn btn-secondary" onClick={() => { setActiveTab('my-bookings'); }}>
                     View My Bookings
                   </button>
                 </div>
