@@ -8,7 +8,10 @@ import { MenuScreen } from './screens/menu/MenuScreen';
 import { OrderScreen } from './screens/order/OrderScreen';
 import { InvoiceScreen } from './screens/invoice/InvoiceScreen';
 import { House, SquaresFour, ForkKnife, ClipboardText, Receipt, SignOut } from '@phosphor-icons/react';
-import { BookingScreen } from './screens/booking/BookingScreen';
+import { CustomerLayout } from './screens/booking/CustomerLayout';
+import { NewBookingScreen } from './screens/booking/NewBookingScreen';
+import { MyBookingsScreen } from './screens/booking/MyBookingsScreen';
+import { CustomerMenuScreen } from './screens/booking/CustomerMenuScreen';
 
 // Admin/Staff Layout
 const AdminLayout = ({ currentUser, onSignOut }: { currentUser: User; onSignOut: () => void }) => {
@@ -168,12 +171,12 @@ function AppRoutes() {
         } 
       />
 
+      {/* Customer Layout and Sub-routes */}
       <Route 
-        path="/bookings" 
         element={
           currentUser ? (
             currentUser.role === 'user' ? (
-              <BookingScreen onSignOut={handleSignOut} />
+              <CustomerLayout currentUser={currentUser} onSignOut={handleSignOut} />
             ) : (
               <Navigate to="/dashboard" replace />
             )
@@ -181,7 +184,12 @@ function AppRoutes() {
             <Navigate to="/login" replace />
           )
         } 
-      />
+      >
+        <Route path="/bookings" element={<Navigate to="/bookings/new" replace />} />
+        <Route path="/bookings/new" element={<NewBookingScreen />} />
+        <Route path="/bookings/my" element={<MyBookingsScreen />} />
+        <Route path="/bookings/menu" element={<CustomerMenuScreen />} />
+      </Route>
 
       {/* Admin/Staff layout routes */}
       <Route 
@@ -219,10 +227,14 @@ function AppRoutes() {
   );
 }
 
+import { ToastProvider } from './context/ToastContext';
+
 function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <ToastProvider>
+        <AppRoutes />
+      </ToastProvider>
     </BrowserRouter>
   );
 }

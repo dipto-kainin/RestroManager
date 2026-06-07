@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, CurrencyInr } from '@phosphor-icons/react';
 import type { Menu, Food } from '../../services/types';
 import { CustomSelect } from '../../components/CustomSelect';
+import { useToast } from '../../context/ToastContext';
 
 // Simple Markdown parser supporting Headings, Bold, Italics, Inline Code, and Bullet Lists safely
 export const parseMarkdown = (text: string): string => {
@@ -72,6 +73,7 @@ export const FoodFormModal: React.FC<FoodFormModalProps> = ({
   onClose,
   onSubmit
 }) => {
+  const { showToast } = useToast();
   const [foodName, setFoodName] = useState(editingFood ? editingFood.name : '');
   const [foodPrice, setFoodPrice] = useState(editingFood ? editingFood.price.toString() : '');
   const [foodDesc, setFoodDesc] = useState(editingFood ? editingFood.description || '' : '');
@@ -86,7 +88,7 @@ export const FoodFormModal: React.FC<FoodFormModalProps> = ({
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size exceeds the 5MB limit.');
+      showToast('File size exceeds the 5MB limit.', 'error');
       return;
     }
 

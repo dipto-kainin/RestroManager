@@ -14,12 +14,14 @@ import { CustomSelect } from '../../components/CustomSelect';
 import { FoodFormModal, parseMarkdown } from './FoodFormModal';
 import { CategoryFormModal } from './CategoryFormModal';
 import { stripHtml, getFirstParagraph } from '../../utils/text';
+import { useToast } from '../../context/ToastContext';
 
 interface MenuScreenProps {
   currentUser: User | null;
 }
 
 export const MenuScreen: React.FC<MenuScreenProps> = ({ currentUser }) => {
+  const { showToast } = useToast();
   const [activeMenuId, setActiveMenuId] = useState<string>('');
   const [activeCategoryName, setActiveCategoryName] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
@@ -113,7 +115,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({ currentUser }) => {
       setActiveCategoryName('');
     } catch (err: any) {
       console.error('Error deleting category:', err);
-      alert('Failed to delete category: ' + err.message);
+      showToast('Failed to delete category: ' + err.message, 'error');
     }
   };
 

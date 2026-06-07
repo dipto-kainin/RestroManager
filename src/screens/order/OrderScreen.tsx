@@ -54,11 +54,12 @@ export const OrderScreen: React.FC = () => {
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
   const readyOrders = orders.filter(o => o.status === 'ready');
-  const servedOrders = orders.filter(o => o.status === 'served' || o.status === 'cancelled');
+  const servedOrders = orders.filter(o => o.status === 'served' || o.status === 'completed' || o.status === 'cancelled');
 
   const renderOrderCard = (order: Order) => {
     const table = tables.find(t => t.id === order.table_id);
     const total = order.items?.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0) || 0;
+    const hasNoItems = !order.items || order.items.length === 0;
 
     return (
       <div key={order.id} className="order-card">
@@ -68,14 +69,29 @@ export const OrderScreen: React.FC = () => {
         </div>
 
         <div className="order-card-details">
-          {order.items?.map((item, idx) => {
-            const food = foods.find(f => f.id === item.food_id);
-            return (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                <span>{food?.name || 'Dish'} x{item.quantity}</span>
-              </div>
-            );
-          })}
+          {hasNoItems ? (
+            <div style={{
+              color: 'oklch(0.4 0.15 20)',
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              backgroundColor: 'oklch(0.95 0.05 20)',
+              padding: '0.375rem 0.5rem',
+              borderRadius: '6px',
+              textAlign: 'center',
+              marginBlock: '0.25rem'
+            }}>
+              ⚠️ Empty Order
+            </div>
+          ) : (
+            order.items?.map((item, idx) => {
+              const food = foods.find(f => f.id === item.food_id);
+              return (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                  <span>{food?.name || 'Dish'} x{item.quantity}</span>
+                </div>
+              );
+            })
+          )}
         </div>
 
         <div className="order-card-footer">
@@ -85,8 +101,16 @@ export const OrderScreen: React.FC = () => {
             {order.status === 'pending' && (
               <button
                 className="btn btn-primary"
-                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.75rem',
+                  borderRadius: '6px',
+                  opacity: hasNoItems ? 0.5 : 1,
+                  cursor: hasNoItems ? 'not-allowed' : 'pointer'
+                }}
                 onClick={() => handleUpdateStatus(order, 'preparing')}
+                disabled={hasNoItems}
+                title={hasNoItems ? "Cannot process an empty order" : ""}
               >
                 <Play size={12} /> Prep
               </button>
@@ -94,8 +118,16 @@ export const OrderScreen: React.FC = () => {
             {order.status === 'preparing' && (
               <button
                 className="btn btn-accent"
-                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.75rem',
+                  borderRadius: '6px',
+                  opacity: hasNoItems ? 0.5 : 1,
+                  cursor: hasNoItems ? 'not-allowed' : 'pointer'
+                }}
                 onClick={() => handleUpdateStatus(order, 'ready')}
+                disabled={hasNoItems}
+                title={hasNoItems ? "Cannot process an empty order" : ""}
               >
                 <Check size={12} /> Ready
               </button>
@@ -107,15 +139,19 @@ export const OrderScreen: React.FC = () => {
                   padding: '0.25rem 0.5rem',
                   fontSize: '0.75rem',
                   borderRadius: '6px',
-                  backgroundColor: 'var(--status-ready)',
-                  borderColor: 'var(--status-ready)'
+                  backgroundColor: hasNoItems ? 'var(--surface-border)' : 'var(--status-ready)',
+                  borderColor: hasNoItems ? 'var(--surface-border)' : 'var(--status-ready)',
+                  opacity: hasNoItems ? 0.5 : 1,
+                  cursor: hasNoItems ? 'not-allowed' : 'pointer'
                 }}
                 onClick={() => handleUpdateStatus(order, 'served')}
+                disabled={hasNoItems}
+                title={hasNoItems ? "Cannot process an empty order" : ""}
               >
                 <Check size={12} /> Serve
               </button>
             )}
-            {order.status !== 'served' && order.status !== 'cancelled' && (
+            {order.status !== 'served' && order.status !== 'completed' && order.status !== 'cancelled' && (
               <button
                 className="btn btn-secondary"
                 style={{ padding: '0.25rem', borderRadius: '6px' }}

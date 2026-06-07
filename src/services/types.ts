@@ -61,11 +61,18 @@ export interface OrderItem {
   unit_price: number;
 }
 
+export interface OrderItemNested {
+  id: string;
+  amount: number;
+  unit_price: number;
+}
+
 export interface Order {
   id?: string;
   order_date: string;
   table_id: string;
-  status: 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled' | 'completed';
+  food_items?: OrderItemNested[];
   items?: OrderItem[];
 }
 

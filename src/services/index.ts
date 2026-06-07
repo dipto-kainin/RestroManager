@@ -7,6 +7,7 @@ export * from './foods';
 export * from './orders';
 export * from './bookings';
 export * from './invoices';
+export * from './payments';
 export * from './queries/index';
 export * from './mutations/index';
 

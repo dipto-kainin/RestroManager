@@ -4,6 +4,7 @@ import {
   useTablesQuery, 
   useOrdersQuery, 
   useBookingsQuery,
+  useInvoicesQuery,
   useUpdateTableMutation,
   useCheckInBookingMutation,
   useCancelBookingMutation,
@@ -11,6 +12,7 @@ import {
   useCreateBookingMutation,
   usePlaceOrderMutation,
   useCheckoutMutation,
+  useConfirmCashPaymentMutation,
   useCreateTableMutation,
   getCurrentUser, 
   type Table, 
@@ -19,16 +21,19 @@ import {
 import { Plus, Users } from '@phosphor-icons/react';
 import { AddTableModal } from './AddTableModal';
 import { TableDetailModal } from './TableDetailModal';
+import { useToast } from '../../context/ToastContext';
 
 export const TableScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Queries
-  const { data: tables = [], isLoading: loadingTables } = useTablesQuery();
-  const { data: orders = [], isLoading: loadingOrders } = useOrdersQuery();
-  const { data: bookings = [], isLoading: loadingBookings } = useBookingsQuery();
+  const { data: tables = [], isLoading: loadingTables } = useTablesQuery(undefined, undefined, 5000);
+  const { data: orders = [], isLoading: loadingOrders } = useOrdersQuery(5000);
+  const { data: bookings = [], isLoading: loadingBookings } = useBookingsQuery(5000);
+  const { data: invoices = [] } = useInvoicesQuery(5000);
 
   const loading = loadingTables || loadingOrders || loadingBookings;
 
@@ -43,7 +48,21 @@ export const TableScreen: React.FC = () => {
   const createBookingMutation = useCreateBookingMutation();
   const placeOrderMutation = usePlaceOrderMutation();
   const checkoutMutation = useCheckoutMutation();
+  const confirmCashMutation = useConfirmCashPaymentMutation();
   const createTableMutation = useCreateTableMutation();
+
+  const handleConfirmCash = async () => {
+    if (!selectedTable) return;
+    const tableActiveOrder = orders.find(o => o.table_id === selectedTable.id && o.status !== 'completed' && o.status !== 'cancelled');
+    if (!tableActiveOrder || !tableActiveOrder.id) return;
+    try {
+      await confirmCashMutation.mutateAsync(tableActiveOrder.id);
+      setSelectedTableId(null);
+      navigate('/invoices');
+    } catch (err) {
+      console.error('Error confirming cash payment:', err);
+    }
+  };
 
   const handleSelectTable = (table: Table) => {
     setSelectedTableId(table.id || null);
@@ -82,7 +101,7 @@ export const TableScreen: React.FC = () => {
     try {
       await updateMinEntryTimeMutation.mutateAsync({ bookingId, val });
     } catch (err: any) {
-      alert(err.message || 'Failed to shift cutoff time');
+      showToast(err.message || 'Failed to shift cutoff time', 'error');
     }
   };
 
@@ -164,7 +183,8 @@ export const TableScreen: React.FC = () => {
         <div className="table-grid">
           {tables.map(table => {
             const isSelected = selectedTable?.id === table.id;
-            const tableActiveOrder = orders.find(o => o.table_id === table.id && o.status !== 'served' && o.status !== 'cancelled');
+            const tableActiveOrder = orders.find(o => o.table_id === table.id && o.status !== 'completed' && o.status !== 'cancelled');
+            const pendingCashRequest = invoices.some(inv => inv.order_id === tableActiveOrder?.id && inv.payment_method === 'cash' && inv.payment_status === 'pending');
             
             let badgeClass = 'badge-vacant';
             if (table.status === 'occupied') badgeClass = 'badge-occupied';
@@ -178,9 +198,17 @@ export const TableScreen: React.FC = () => {
                 key={table.id}
                 className={`table-cell ${isSelected ? 'selected' : ''} ${table.status}`}
                 onClick={() => handleSelectTable(table)}
+                style={pendingCashRequest ? { borderColor: 'oklch(0.60 0.15 45)', borderWidth: '2px', boxShadow: '0 0 10px rgba(226,139,0,0.1)' } : {}}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <span className={`badge ${badgeClass}`}>{table.status}</span>
+                  <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+                    <span className={`badge ${badgeClass}`}>{table.status}</span>
+                    {pendingCashRequest && (
+                      <span className="badge" style={{ backgroundColor: 'oklch(0.60 0.15 45)', color: 'white', fontWeight: 700 }}>
+                        CASH REQ
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--muted)' }}>
                     <Users size={14} />
                     <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{table.number_of_guests}</span>
@@ -238,6 +266,7 @@ export const TableScreen: React.FC = () => {
           onCreateBooking={handleCreateBooking}
           onCreateOrder={handleCreateOrder}
           onCheckout={handleCheckout}
+          onConfirmCashPayment={handleConfirmCash}
           onNavigateToOrders={() => navigate('/orders')}
         />
       )}

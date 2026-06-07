@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createOrder, createOrderItem, updateOrder } from '../orders';
+import { createOrder, updateOrder } from '../orders';
 import { updateTable } from '../tables';
 import type { Table, Order, Food } from '../types';
 
@@ -10,32 +10,31 @@ export const usePlaceOrderMutation = () => {
       const orders = queryClient.getQueryData<Order[]>(['orders']) || [];
       const tables = queryClient.getQueryData<Table[]>(['tables']) || [];
       
-      const activeOrder = orders.find(o => o.table_id === tableId && o.status !== 'served' && o.status !== 'cancelled');
-      let orderId = '';
+      const activeOrder = orders.find(o => o.table_id === tableId && o.status !== 'completed' && o.status !== 'cancelled');
       
+      const newFoodItems = cartItems.map(item => ({
+        id: item.food.id || '',
+        amount: item.quantity,
+        unit_price: item.food.price
+      }));
+
       if (activeOrder && activeOrder.id) {
-        orderId = activeOrder.id;
+        const updatedFoodItems = [
+          ...(activeOrder.food_items || []),
+          ...newFoodItems
+        ];
+        await updateOrder(activeOrder.id, {
+          ...activeOrder,
+          food_items: updatedFoodItems
+        });
       } else {
         const orderPayload: Order = {
           table_id: tableId,
           order_date: new Date().toISOString(),
-          status: 'pending'
+          status: 'pending',
+          food_items: newFoodItems
         };
-        const createdOrder = await createOrder(orderPayload, []);
-        orderId = createdOrder.id || '';
-      }
-
-      if (!orderId) {
-        throw new Error('Failed to identify or create active order.');
-      }
-
-      for (const item of cartItems) {
-        await createOrderItem({
-          order_id: orderId,
-          food_id: item.food.id || '',
-          quantity: item.quantity,
-          unit_price: item.food.price
-        });
+        await createOrder(orderPayload);
       }
 
       const table = tables.find(t => t.id === tableId);
@@ -63,7 +62,7 @@ export const useUpdateOrderStatusMutation = () => {
         status: newStatus
       });
       
-      if (newStatus === 'served' || newStatus === 'cancelled') {
+      if (newStatus === 'completed' || newStatus === 'cancelled') {
         const tables = queryClient.getQueryData<Table[]>(['tables']) || [];
         const table = tables.find(t => t.id === order.table_id);
         if (table && table.id) {

@@ -6,9 +6,9 @@ import { ChartPieSlice, ClipboardText, CurrencyInr, ForkKnife, Plus, ArrowUpRigh
 export const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
 
-  const { data: tables = [], isLoading: loadingTables } = useTablesQuery();
-  const { data: orders = [], isLoading: loadingOrders } = useOrdersWithActiveItemsQuery();
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoicesQuery();
+  const { data: tables = [], isLoading: loadingTables } = useTablesQuery(undefined, undefined, 5000);
+  const { data: orders = [], isLoading: loadingOrders } = useOrdersWithActiveItemsQuery(5000);
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoicesQuery(5000);
   const { data: foods = [], isLoading: loadingFoods } = useFoodsQuery();
 
   const loading = loadingTables || loadingOrders || loadingInvoices || loadingFoods;
@@ -25,7 +25,7 @@ export const DashboardScreen: React.FC = () => {
   const occupiedTables = tables.filter(t => t.status === 'occupied').length;
   const occupancyRate = tables.length ? Math.round((occupiedTables / tables.length) * 100) : 0;
   
-  const activeOrders = orders.filter(o => o.status !== 'served' && o.status !== 'cancelled').length;
+  const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length;
   
   const totalRevenue = invoices
     .filter(inv => inv.payment_status === 'paid')
@@ -33,7 +33,7 @@ export const DashboardScreen: React.FC = () => {
 
   const recentInvoices = [...invoices].reverse().slice(0, 5);
   const activeOrderList = orders
-    .filter(o => o.status !== 'served' && o.status !== 'cancelled')
+    .filter(o => o.status !== 'completed' && o.status !== 'cancelled')
     .slice(0, 4);
 
   return (

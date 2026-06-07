@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Receipt, FileText, X } from '@phosphor-icons/react';
+import { Plus, Receipt, FileText, X, Check } from '@phosphor-icons/react';
 import type { Table, Booking, Food, Order } from '../../services/types';
-import { useOrderItemsQuery, useFoodsQuery } from '../../services';
+import { useOrderItemsQuery, useFoodsQuery, useInvoicesQuery } from '../../services';
 import { CustomSelect } from '../../components/CustomSelect';
 import { BookingForm } from './BookingForm';
 import { OrderForm } from './OrderForm';
@@ -18,6 +18,7 @@ interface TableDetailModalProps {
   onCreateBooking: (bookingData: any) => Promise<void>;
   onCreateOrder: (cartItems: { food: Food; quantity: number }[]) => Promise<void>;
   onCheckout: () => Promise<void>;
+  onConfirmCashPayment: () => Promise<void>;
   onNavigateToOrders: () => void;
 }
 
@@ -33,6 +34,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   onCreateBooking,
   onCreateOrder,
   onCheckout,
+  onConfirmCashPayment,
   onNavigateToOrders
 }) => {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -44,18 +46,23 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
 
   // Fetch foods list only when details modal is open
   const { data: foods = [] } = useFoodsQuery();
+  const { data: invoices = [] } = useInvoicesQuery();
 
   // Helper to determine if shared bookings exist and seats are left
   const currentTableBookings = bookings.filter(b => b.table_id === selectedTable.id && (b.status === 'pending' || b.status === 'checked_in'));
   const hasSharedBooking = currentTableBookings.some(b => b.is_shared);
   const isSharedAndNotFull = (hasSharedBooking && (selectedTable.seats_reserved || 0) < selectedTable.number_of_guests);
 
-  const activeOrder = orders.find(o => o.table_id === selectedTable.id && o.status !== 'served' && o.status !== 'cancelled');
+  const activeOrder = orders.find(o => o.table_id === selectedTable.id && o.status !== 'completed' && o.status !== 'cancelled');
   
   // Dynamically query items for the active order of this table
   const { data: orderItems = [] } = useOrderItemsQuery(activeOrder?.id || '');
   
   const activeOrderTotal = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+  const pendingCashRequest = invoices.find(
+    inv => inv.order_id === activeOrder?.id && inv.payment_method === 'cash' && inv.payment_status === 'pending'
+  );
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -459,43 +466,96 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                       <span className={`badge badge-${activeOrder.status}`}>{activeOrder.status}</span>
                     </div>
                     
+                    {/* Warning if empty */}
+                    {orderItems.length === 0 && (
+                      <div style={{
+                        padding: '0.75rem',
+                        backgroundColor: 'oklch(0.95 0.05 20)',
+                        border: '1px solid oklch(0.85 0.10 20)',
+                        borderRadius: '8px',
+                        color: 'oklch(0.4 0.15 20)',
+                        fontSize: '0.85rem',
+                        fontWeight: 500,
+                        textAlign: 'center',
+                        marginBottom: '1rem'
+                      }}>
+                        ⚠️ Warning: This order has no items. Add items before processing checkout.
+                      </div>
+                    )}
+
                     {/* Active Order Items Summary */}
-                    <div style={{
-                      maxHeight: '280px',
-                      overflowY: 'auto',
-                      padding: '0.5rem',
-                      border: '1px solid var(--surface-border)',
-                      borderRadius: '6px',
-                      backgroundColor: 'var(--bg)',
-                      marginBottom: '1rem'
-                    }}>
-                      {orderItems.map(item => {
-                        const food = foods.find(f => f.id === item.food_id);
-                        return (
-                          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', paddingBottom: '0.25rem' }}>
-                            <span>{food?.name} x {item.quantity}</span>
-                            <span style={{ fontFamily: 'var(--font-mono)' }}>₹{(item.quantity * item.unit_price).toFixed(2)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {orderItems.length > 0 && (
+                      <div style={{
+                        maxHeight: '280px',
+                        overflowY: 'auto',
+                        padding: '0.5rem',
+                        border: '1px solid var(--surface-border)',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--bg)',
+                        marginBottom: '1rem'
+                      }}>
+                        {orderItems.map(item => {
+                          const food = foods.find(f => f.id === item.food_id);
+                          return (
+                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', paddingBottom: '0.25rem' }}>
+                              <span>{food?.name} x {item.quantity}</span>
+                                      <span style={{ fontFamily: 'var(--font-mono)' }}>₹{(item.quantity * item.unit_price).toFixed(2)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {pendingCashRequest && (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          backgroundColor: 'oklch(0.95 0.05 45)',
+                          border: '1px solid oklch(0.85 0.1 45)',
+                          borderRadius: '8px',
+                          color: 'oklch(0.40 0.12 45)',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          marginBottom: '1rem',
+                          textAlign: 'center',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.25rem'
+                        }}>
+                          <span>⚠️ Table T-{selectedTable.table_number} requested Cash Payment!</span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Please collect: ₹{activeOrderTotal.toFixed(2)}</span>
+                        </div>
+                      )}
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginBottom: '1.5rem' }}>
-                      <span>Total:</span>
-                      <span style={{ fontFamily: 'var(--font-mono)' }}>₹{activeOrderTotal.toFixed(2)}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setIsOrdering(true)}>
-                        <Plus size={16} /> Add Items to Order
-                      </button>
-                      <button className="btn btn-accent" style={{ width: '100%' }} onClick={onCheckout}>
-                        <Receipt size={16} /> Process Payment & Checkout
-                      </button>
-                      <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onNavigateToOrders}>
-                        <FileText size={16} /> Open Order board
-                      </button>
-                    </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginBottom: '1.5rem' }}>
+                        <span>Total:</span>
+                        <span style={{ fontFamily: 'var(--font-mono)' }}>₹{activeOrderTotal.toFixed(2)}</span>
+                      </div>
+ 
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setIsOrdering(true)}>
+                          <Plus size={16} /> Add Items to Order
+                        </button>
+                        <button 
+                          className="btn btn-accent" 
+                          style={{ width: '100%' }} 
+                          onClick={onCheckout}
+                          disabled={orderItems.length === 0}
+                          title={orderItems.length === 0 ? "Cannot checkout an empty order" : ""}
+                        >
+                          <Receipt size={16} /> Process Razorpay & Checkout
+                        </button>
+                        <button 
+                          className="btn" 
+                          style={{ width: '100%', backgroundColor: 'oklch(0.60 0.15 140)', borderColor: 'oklch(0.60 0.15 140)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }} 
+                          onClick={onConfirmCashPayment}
+                          disabled={orderItems.length === 0}
+                          title={orderItems.length === 0 ? "Cannot checkout an empty order" : ""}
+                        >
+                          <Check size={16} /> Confirm Cash & Checkout
+                        </button>
+                        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onNavigateToOrders}>
+                          <FileText size={16} /> Open Order board
+                        </button>
+                      </div>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', color: 'var(--muted)', gap: '1rem' }}>
