@@ -55,7 +55,7 @@ npm install
 ### 2. Configure Environment Variables
 Create a `.env` file in the `RestroManager` directory:
 ```env
-VITE_API_URL=http://localhost:8080
+VITE_API_URL=http://localhost:8080 // or use our backend service
 ```
 
 ### 3. Run Development Server
