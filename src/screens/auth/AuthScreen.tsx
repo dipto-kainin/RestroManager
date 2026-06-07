@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, signup, type User } from '../../services';
-import { Envelope, Key, User as UserIcon, Phone, ArrowRight, ShieldCheck, UserGear, Users } from '@phosphor-icons/react';
+import { Envelope, Key, User as UserIcon, Phone, ArrowRight } from '@phosphor-icons/react';
 
 interface AuthScreenProps {
   onAuthSuccess: (user: User) => void;
@@ -171,47 +171,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     required
                     style={{ paddingLeft: '2.5rem' }}
                   />
-                </div>
-              </div>
-            )}
-
-            {isLogin && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <span className="form-label" style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Demo Accounts:</span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    style={{ fontSize: '0.75rem', padding: '0.375rem 0.5rem', flex: 1 }}
-                    onClick={() => {
-                      setEmail('admin@bistro.com');
-                      setPassword('password');
-                    }}
-                  >
-                    <ShieldCheck size={14} /> Admin
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    style={{ fontSize: '0.75rem', padding: '0.375rem 0.5rem', flex: 1 }}
-                    onClick={() => {
-                      setEmail('staff@bistro.com');
-                      setPassword('password');
-                    }}
-                  >
-                    <UserGear size={14} /> Staff
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    style={{ fontSize: '0.75rem', padding: '0.375rem 0.5rem', flex: 1 }}
-                    onClick={() => {
-                      setEmail('customer@bistro.com');
-                      setPassword('password');
-                    }}
-                  >
-                    <Users size={14} /> Customer
-                  </button>
                 </div>
               </div>
             )}
