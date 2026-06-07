@@ -74,8 +74,6 @@ npm run build
 Vercel deployment is configured via the local `vercel.json` file. It automatically enables Clean URLs, removes trailing slashes, and redirects all client routing to `index.html` to prevent 404 errors on browser page reloads:
 ```json
 {
-  "cleanUrls": true,
-  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/(.*)",
