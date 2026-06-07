@@ -4,7 +4,8 @@ import {
   useTablesQuery,
   useCreateBookingMutation,
   type Table, 
-  type Booking 
+  type Booking,
+  getCurrentUser 
 } from '../../services';
 import { Users, Check, MapPin, Info, ArrowRight, CaretLeft } from '@phosphor-icons/react';
 import { CustomSelect } from '../../components/CustomSelect';
@@ -34,6 +35,41 @@ export const NewBookingScreen: React.FC = () => {
 
   // Mutations
   const createBookingMutation = useCreateBookingMutation();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const paramPartySize = searchParams.get('partySize');
+    const paramDate = searchParams.get('date');
+    const paramTime = searchParams.get('time');
+    const paramDuration = searchParams.get('duration');
+    const paramTableId = searchParams.get('tableId');
+    const paramComfortSharing = searchParams.get('comfortSharing');
+    const paramStep = searchParams.get('step');
+
+    if (paramPartySize) setPartySize(parseInt(paramPartySize));
+    if (paramDate) setBookingDate(paramDate);
+    if (paramTime) setBookingTime(paramTime);
+    if (paramDuration) setBookingDuration(parseFloat(paramDuration));
+    if (paramTableId) setSelectedTableId(paramTableId);
+    if (paramComfortSharing) setComfortSharing(paramComfortSharing === 'true');
+    
+    if (paramStep) {
+      setStep(paramStep as BookingStep);
+      const date = paramDate || bookingDate;
+      const time = paramTime || bookingTime;
+      const duration = paramDuration ? parseFloat(paramDuration) : bookingDuration;
+      const startDateTime = new Date(`${date}T${time}:00`);
+      const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
+      setTimeWindow({
+        start: startDateTime.toISOString(),
+        end: endDateTime.toISOString()
+      });
+    }
+
+    if (searchParams.toString() !== '') {
+      navigate('/bookings/new', { replace: true });
+    }
+  }, [navigate]);
 
   const getSelectableTimeOptions = (selectedDateStr: string) => {
     const allSlots = Array.from({ length: 25 }).map((_, i) => {
@@ -138,6 +174,13 @@ export const NewBookingScreen: React.FC = () => {
   const handleConfirmBooking = async () => {
     if (!selectedTable || !selectedTable.id) return;
     setBookingError('');
+
+    const user = getCurrentUser();
+    if (!user) {
+      const redirectUrl = `/bookings/new?partySize=${partySize}&date=${bookingDate}&time=${bookingTime}&duration=${bookingDuration}&tableId=${selectedTableId}&comfortSharing=${comfortSharing}&step=confirm`;
+      navigate(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
+      return;
+    }
 
     const capacity = selectedTable.capacity || selectedTable.number_of_guests;
     const sharingInfo = getSharingInfo(selectedTable);

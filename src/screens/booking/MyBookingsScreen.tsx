@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   useTablesQuery,
   useBookingsQuery,
-  useCancelBookingMutation 
+  useCancelBookingMutation,
+  getCurrentUser
 } from '../../services';
 import { Users, X, CalendarCheck } from '@phosphor-icons/react';
 
 export const MyBookingsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+
+  useEffect(() => {
+    if (!currentUser) {
+      navigate('/login?redirect=/bookings/my');
+    }
+  }, [currentUser, navigate]);
 
   // Queries
   const { data: tables = [] } = useTablesQuery();

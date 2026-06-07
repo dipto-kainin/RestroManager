@@ -113,13 +113,13 @@ export const CustomerMenuScreen: React.FC = () => {
         key: rpOrder.key,
         amount: rpOrder.amount,
         currency: rpOrder.currency,
-        name: "Citrus Sunlit Bistro",
+        name: "Bistro Restaurant Chain",
         description: `Checkout Table T-${table?.table_number || '?'}`,
         order_id: rpOrder.id,
         handler: async (response: any) => {
           try {
             await verifyRazorpayPayment({
-              order_id: activeOrder.id,
+              order_id: activeOrder.id!,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,

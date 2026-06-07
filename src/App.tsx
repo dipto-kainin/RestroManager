@@ -12,6 +12,7 @@ import { CustomerLayout } from './screens/booking/CustomerLayout';
 import { NewBookingScreen } from './screens/booking/NewBookingScreen';
 import { MyBookingsScreen } from './screens/booking/MyBookingsScreen';
 import { CustomerMenuScreen } from './screens/booking/CustomerMenuScreen';
+import { HomeScreen } from './screens/home/HomeScreen';
 
 // Admin/Staff Layout
 const AdminLayout = ({ currentUser, onSignOut }: { currentUser: User; onSignOut: () => void }) => {
@@ -21,8 +22,8 @@ const AdminLayout = ({ currentUser, onSignOut }: { currentUser: User; onSignOut:
       <aside className="sidebar">
         <div>
           <div className="brand-section">
-            <div className="brand-logo">C</div>
-            <span className="brand-name">RestroManager</span>
+            <div className="brand-logo">B</div>
+            <span className="brand-name">Bistro Chain</span>
           </div>
 
           <ul className="nav-links">
@@ -136,8 +137,15 @@ function AppRoutes() {
 
   const handleAuthSuccess = (user: User) => {
     setLocalCurrentUser(user);
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirectUrl = searchParams.get('redirect');
+
     if (user.role === 'user') {
-      navigate('/bookings');
+      if (redirectUrl && redirectUrl.startsWith('/bookings')) {
+        navigate(redirectUrl);
+      } else {
+        navigate('/bookings');
+      }
     } else {
       navigate('/dashboard');
     }
@@ -160,6 +168,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<HomeScreen />} />
       <Route 
         path="/login" 
         element={
@@ -174,14 +183,10 @@ function AppRoutes() {
       {/* Customer Layout and Sub-routes */}
       <Route 
         element={
-          currentUser ? (
-            currentUser.role === 'user' ? (
-              <CustomerLayout currentUser={currentUser} onSignOut={handleSignOut} />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )
+          !currentUser || currentUser.role === 'user' ? (
+            <CustomerLayout currentUser={currentUser} onSignOut={handleSignOut} />
           ) : (
-            <Navigate to="/login" replace />
+            <Navigate to="/dashboard" replace />
           )
         } 
       >

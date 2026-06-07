@@ -40,7 +40,7 @@ export const DashboardScreen: React.FC = () => {
     <div>
       <div className="view-header">
         <div>
-          <h2 className="view-title">Citrus Bistro Overview</h2>
+          <h2 className="view-title">Bistro Chain Overview</h2>
           <p className="view-subtitle">Real-time floor statistics, pending service orders, and billing overview.</p>
         </div>
       </div>

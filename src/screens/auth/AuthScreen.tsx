@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { login, signup, type User } from '../../services';
 import { Envelope, Key, User as UserIcon, Phone, ArrowRight, ShieldCheck, UserGear, Users } from '@phosphor-icons/react';
 
@@ -7,6 +8,7 @@ interface AuthScreenProps {
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,18 +49,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   return (
     <div className="auth-page">
       <div className="auth-sidebar">
-        <div className="brand-section">
-          <div className="brand-logo">C</div>
-          <span className="brand-name" style={{ color: 'var(--ink)' }}>RestroManager</span>
+        <div 
+          className="brand-section" 
+          onClick={() => navigate('/')} 
+          style={{ cursor: 'pointer' }}
+          title="Back to Home"
+        >
+          <div className="brand-logo">B</div>
+          <span className="brand-name" style={{ color: 'var(--ink)' }}>Bistro Chain</span>
         </div>
         <div>
-          <h1 className="auth-sidebar-title">Citrus Sunlit Bistro</h1>
+          <h1 className="auth-sidebar-title">Bistro Restaurant Chain</h1>
           <p className="auth-sidebar-desc">
             Vibrant floor maps, instant order queues, and automated billing. Control front-of-house operations with absolute clarity.
           </p>
         </div>
         <div style={{ fontSize: '0.85rem', fontWeight: 500, opacity: 0.8 }}>
-          &copy; {new Date().getFullYear()} RestroManager. Crafted for taste.
+          &copy; {new Date().getFullYear()} Bistro Restaurant Chain. Crafted for taste.
         </div>
       </div>
 
